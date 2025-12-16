@@ -24,6 +24,34 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+// HomeScreen - главный экран после подписки
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Главный экран'),
+      ),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.verified, size: 100, color: Colors.green),
+            SizedBox(height: 20),
+            Text(
+              'Подписка активирована!',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// OnboardingScreen - экран онбординга
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -33,23 +61,23 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _controller = PageController();
-  int _index = 0;
+  int _currentIndex = 0;
 
-  final List<String> texts = [
-    'Добро пожаловать в приложение',
-    'Улучшай опыт с подпиской',
+  final List<String> _pages = [
+    'Добро пожаловать в приложение!',
+    'Получите полный доступ с подпиской',
   ];
 
-  void _next() {
-    if (_index == texts.length - 1) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const PaywallScreen()),
-      );
-    } else {
+  void _handleContinue() {
+    if (_currentIndex < _pages.length - 1) {
       _controller.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const PaywallScreen()),
       );
     }
   }
@@ -63,13 +91,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Expanded(
               child: PageView.builder(
                 controller: _controller,
-                itemCount: texts.length,
-                onPageChanged: (i) => setState(() => _index = i),
-                itemBuilder: (_, i) => Center(
+                itemCount: _pages.length,
+                onPageChanged: (index) {
+                  setState(() => _currentIndex = index);
+                },
+                itemBuilder: (context, index) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
                     child: Text(
-                      texts[i],
+                      _pages[index],
                       style: const TextStyle(fontSize: 24),
                       textAlign: TextAlign.center,
                     ),
@@ -82,7 +112,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _next,
+                  onPressed: _handleContinue,
                   child: const Text('Продолжить'),
                 ),
               ),
@@ -93,6 +123,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 }
+
+// PaywallScreen - экран с выбором подписки
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
 
@@ -101,64 +133,48 @@ class PaywallScreen extends StatefulWidget {
 }
 
 class _PaywallScreenState extends State<PaywallScreen> {
-  String selectedPlan = 'month';
+  String _selectedPlan = 'month';
 
-  void _buy() async {
+  void _handlePurchase() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('subscribed', true);
-
+    
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
     );
   }
 
-  Widget _plan({
+  Widget _buildPlanOption({
     required String id,
     required String title,
     required String price,
   }) {
-    final bool isSelected = selectedPlan == id;
-
+    final isSelected = _selectedPlan == id;
+    
     return GestureDetector(
-      onTap: () => setState(() => selectedPlan = id),
+      onTap: () => setState(() => _selectedPlan = id),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? Colors.green : Colors.grey,
+            color: isSelected ? Colors.green : Colors.grey.shade600,
             width: 2,
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(title, style: const TextStyle(fontSize: 18)),
-            Text(price),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Подписка')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _plan(id: 'month', title: 'Месяц', price: '\$4.99'),
-            const SizedBox(height: 12),
-            _plan(id: 'year', title: 'Год (скидка)', price: '\$ ̶60̶.0̶0̶  \$29.99'),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _buy,
-                child: const Text('Продолжить'),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            ),
+            Text(
+              price,
+              style: TextStyle(
+                fontSize: 16,
+                color: isSelected ? Colors.green : Colors.white,
               ),
             ),
           ],
@@ -166,26 +182,56 @@ class _PaywallScreenState extends State<PaywallScreen> {
       ),
     );
   }
-}
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: const [
-            Text(
-              '🎉 You have premium access!',
+      appBar: AppBar(
+        title: const Text('Подписка'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            const Text(
+              'Выберите тарифный план',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 16),
-            Text('• Unlimited content'),
-            Text('• No ads'),
-            Text('• Exclusive features'),
+            const SizedBox(height: 30),
+            _buildPlanOption(
+              id: 'month',
+              title: 'Ежемесячная подписка',
+              price: '\$4.99/месяц',
+            ),
+            const SizedBox(height: 16),
+            _buildPlanOption(
+              id: 'year',
+              title: 'Годовая подписка',
+              price: '\$29.99/год',
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Экономия 50% по сравнению с помесячной оплатой',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.green.shade300,
+              ),
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _handlePurchase,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text(
+                  'Продолжить',
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            ),
           ],
         ),
       ),
